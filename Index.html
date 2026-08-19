@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grade Horária Online</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .header-panel { background: #2563eb; color: white; padding: 20px 0 15px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; }
+    .header-brand-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 8px; }
+    .school-logo { max-height: 60px; max-width: 180px; object-fit: contain; background: rgba(255, 255, 255, 0.95); padding: 4px 10px; border-radius: 8px; }
+    .nav-tabs-custom { border-bottom: none; display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+    .nav-tabs-custom .btn-tab { background-color: rgba(255,255,255,0.15); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .nav-tabs-custom .btn-tab.active { background-color: white; color: #1d4ed8; }
+    .card-filter { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background: white; margin-top: -20px; }
+    .table-container { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 20px; margin-top: 20px; }
+    .table-schedule { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .table-schedule th { background: #1e293b; color: white; text-align: center; padding: 12px; font-size: 0.85rem; text-transform: uppercase; }
+    .table-schedule td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; vertical-align: middle; font-size: 0.9rem; }
+    .cell-break { background-color: #f8fafc; color: #64748b; font-weight: bold; font-style: italic; }
+    .badge-sub { display: block; font-size: 0.75rem; color: #2563eb; font-weight: 600; margin-top: 4px; }
+    .badge-subst { display: block; font-size: 0.75rem; color: #d97706; font-weight: 700; margin-top: 4px; background: #fef3c7; border-radius: 4px; padding: 2px 4px; }
+    .recado-card { border-left: 4px solid #2563eb; background: #f8fafc; border-radius: 8px; padding: 15px; margin-bottom: 12px; }
+    .horarios-check-group { max-height: 120px; overflow-y: auto; background: #ffffff; border: 1px solid #ced4da; border-radius: 6px; padding: 8px; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header-panel text-center">
+    <div class="header-brand-container">
+      <div id="logoWrapper"><i class="fa-solid fa-school fa-2x text-warning"></i></div>
+      <div class="text-start">
+        <h3 class="m-0 fw-bold">Grade Horária Online</h3>
+        <p class="mb-0 opacity-75 small">Painel Escolar de Consultas e Horários</p>
+      </div>
+    </div>
+    <div class="nav-tabs-custom">
+      <button id="tabTurma" class="btn-tab active" onclick="setTab('turma')"><i class="fa-solid fa-users me-1"></i> Por Turma</button>
+      <button id="tabGeral" class="btn-tab" onclick="setTab('geral')"><i class="fa-solid fa-table-cells me-1"></i> Visão Geral (Todas)</button>
+      <button id="tabProf" class="btn-tab" onclick="setTab('professor')"><i class="fa-solid fa-chalkboard-user me-1"></i> Por Professor</button>
+      <button id="tabObs" class="btn-tab" onclick="setTab('obs')"><i class="fa-solid fa-bullhorn me-1"></i> Mural de Avisos</button>
+      <button id="tabAdmin" class="btn-tab bg-warning text-dark" onclick="setTab('admin')"><i class="fa-solid fa-user-gear me-1"></i> Painel do Gestor</button>
+    </div>
+  </div>
+
+  <div class="container pb-5">
+    <!-- FILTROS -->
+    <div id="panelFilters" class="card card-filter p-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fw-bold text-secondary small">TURNO</label>
+          <select id="selectTurno" class="form-select" onchange="renderSeletorAlvo()">
+            <option value="1">1º Turno (Manhã)</option>
+            <option value="2">2º Turno (Tarde/Noite)</option>
+          </select>
+        </div>
+        <div id="colSelectAlvo" class="col-md-3">
+          <label id="labelAlvo" class="form-label fw-bold text-secondary small">TURMA</label>
+          <select id="selectAlvo" class="form-select" onchange="renderTabela()"><option value="">Carregando...</option></select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-bold text-secondary small">VISUALIZAÇÃO / DIA</label>
+          <select id="selectDia" class="form-select" onchange="renderTabela()">
+            <option id="optHoje" value="HOJE">Hoje</option>
+            <option id="optSemana" value="SEMANA">Semana Completa</option>
+            <option value="SEGUNDA-FEIRA">Segunda-Feira</option>
+            <option value="TERÇA-FEIRA">Terça-Feira</option>
+            <option value="QUARTA-FEIRA">Quarta-Feira</option>
+            <option value="QUINTA-FEIRA">Quinta-Feira</option>
+            <option value="SEXTA-FEIRA">Sexta-Feira</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button class="btn btn-outline-primary w-100" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MURAL INLINE -->
+    <div id="muralInline" class="mt-4 d-none">
+      <div class="alert alert-warning border-0 shadow-sm rounded-3 p-3">
+        <h6 class="fw-bold mb-2 text-dark"><i class="fa-solid fa-bell me-2"></i>Avisos Recentes:</h6>
+        <div id="listaRecadosInline"></div>
+      </div>
+    </div>
+
+    <!-- TABELA HORÁRIA -->
+    <div id="panelTable" class="table-container">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 id="tableTitle" class="fw-bold text-dark m-0">Grade Horária</h5>
+        <span id="badgeTurno" class="badge bg-primary px-3 py-2">1º TURNO</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table-schedule">
+          <thead id="tableHeader"></thead>
+          <tbody id="tableBody"><tr><td colspan="6" class="text-center py-4">Carregando horários...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MURAL DA ABA -->
+    <div id="panelObs" class="table-container d-none">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <h5 class="fw-bold mb-3">Publicar Novo Recado / Aviso</h5>
+          <form onsubmit="salvarRecado(event)">
+            <div class="mb-3">
+              <label class="form-label fw-bold text-secondary">Seu Nome / Cargo</label>
+              <input type="text" id="obsAutor" class="form-control" placeholder="Ex: Prof. Wellington" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-secondary">Aviso / Recado</label>
+              <textarea id="obsMsg" class="form-control" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Publicar no Mural</button>
+          </form>
+        </div>
+        <div class="col-md-6">
+          <h5 class="fw-bold mb-3">Avisos do Mural</h5>
+          <div id="listaRecadosMural"><p class="text-muted">Carregando avisos...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAINEL DO GESTOR -->
+    <div id="panelAdmin" class="table-container d-none">
+      <h4 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-sliders text-warning me-2"></i>Painel de Gestão Escolar</h4>
+      <div class="row g-4">
+        <div class="col-md-5">
+          <div class="card p-3 border-0 bg-light">
+            <h6 class="fw-bold mb-3 text-primary">Cadastrar Substituição</h6>
+            <form onsubmit="cadastrarSubstForm(event)">
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Prof. Ausente (Grade)</label>
+                <select id="substAusente" class="form-select form-select-sm" onchange="aoMudarProfOuDia()" required></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Prof. Substituto</label>
+                <select id="substSubstituto" class="form-select form-select-sm" required></select>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <label class="form-label small fw-bold">Dia da Semana</label>
+                  <select id="substDia" class="form-select form-select-sm" onchange="aoMudarProfOuDia()">
+                    <option value="SEGUNDA-FEIRA">Segunda-Feira</option>
+                    <option value="TERÇA-FEIRA">Terça-Feira</option>
+                    <option value="QUARTA-FEIRA">Quarta-Feira</option>
+                    <option value="QUINTA-FEIRA">Quinta-Feira</option>
+                    <option value="SEXTA-FEIRA">Sexta-Feira</option>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small fw-bold">Matéria Sugerida</label>
+                  <select id="substMateriaSelect" class="form-select form-select-sm" onchange="aoMudarMateria()">
+                    <option value="">Selecione...</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold text-dark">Horários / Turmas Atingidas</label>
+                <div id="horariosCheckGroup" class="horarios-check-group"><span class="text-muted small">Selecione o professor e o dia.</span></div>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Matéria Personalizada</label>
+                <input type="text" id="substMateria" class="form-control form-control-sm">
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label small fw-bold">Data Início</label>
+                  <input type="date" id="substInicio" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small fw-bold">Data Fim</label>
+                  <input type="date" id="substFim" class="form-control form-control-sm" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-sm btn-primary w-100">Salvar Substituição</button>
+            </form>
+          </div>
+        </div>
+        <div class="col-md-7">
+          <h6 class="fw-bold mb-3 text-dark">Substituições Cadastradas</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover border">
+              <thead class="table-light">
+                <tr><th>Ausente</th><th>Substituto</th><th>Turma</th><th>Horário / Dia</th><th>Período</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="tbodySubst"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ COLE SEU LINK DO APPS SCRIPT ENTRE AS ASPAS ABAIXO:
+    var API_URL = "https://script.google.com/macros/s/AKfycby2DChYf5aFMvHzgigVyGmYC5LBp1hVgQ6AUVels-RVtGI_9r3jgMzEkPUEeUHb9lnx/exec"; 
+    var LOGO_URL = "https://drive.google.com/file/d/1rPsYhDlZEio5QKBqlDai4oDT9Gw-DO5g/view?usp=sharing";
+
+    var rawData = null;
+    var currentTab = 'turma';
+    var todosDias = ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA"];
+    var aulasiProfMapa = {};
+
+    function carregarLogoHeader() {
+      if (LOGO_URL && LOGO_URL.trim() !== "") {
+        var idLimpo = LOGO_URL.trim();
+        if (idLimpo.indexOf("drive.google.com") !== -1 || idLimpo.indexOf("http") !== -1) {
+          var match = idLimpo.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) idLimpo = match[1];
+        }
+        var img = new Image();
+        img.src = "https://lh3.googleusercontent.com/d/" + idLimpo;
+        img.className = "school-logo";
+        img.onerror = function() { document.getElementById('logoWrapper').innerHTML = '<i class="fa-solid fa-school fa-2x text-warning"></i>'; };
+        document.getElementById('logoWrapper').innerHTML = '';
+        document.getElementById('logoWrapper').appendChild(img);
+      }
+    }
+
+    function getDiaSemanaHoje() {
+      var d = new Date().getDay();
+      if (d === 0 || d === 6) return "SEGUNDA-FEIRA";
+      return todosDias[d - 1];
+    }
+
+    window.onload = function() {
+      carregarLogoHeader();
+      document.getElementById('optHoje').innerText = 'Hoje (' + getDiaSemanaHoje().split('-')[0] + ')';
+      document.getElementById('selectDia').value = 'HOJE';
+      carregarDados();
+    };
+
+    function carregarDados() {
+      fetch(API_URL + '?action=getGridData')
+        .then(res => res.json())
+        .then(res => {
+          rawData = res;
+          populaSelectProfessores();
+          renderTabelasAdmin();
+          renderSeletorAlvo();
+          renderMural();
+        });
+    }
+
+    function setTab(tab) {
+      currentTab = tab;
+      document.getElementById('tabTurma').classList.toggle('active', tab === 'turma');
+      document.getElementById('tabGeral').classList.toggle('active', tab === 'geral');
+      document.getElementById('tabProf').classList.toggle('active', tab === 'professor');
+      document.getElementById('tabObs').classList.toggle('active', tab === 'obs');
+      document.getElementById('tabAdmin').classList.toggle('active', tab === 'admin');
+
+      var isConsultas = (tab === 'turma' || tab === 'professor' || tab === 'geral');
+      document.getElementById('panelFilters').classList.toggle('d-none', !isConsultas);
+      document.getElementById('panelTable').classList.toggle('d-none', !isConsultas);
+      document.getElementById('panelObs').classList.toggle('d-none', tab !== 'obs');
+      document.getElementById('panelAdmin').classList.toggle('d-none', tab !== 'admin');
+
+      if (tab === 'geral') {
+        document.getElementById('colSelectAlvo').classList.add('d-none');
+        document.getElementById('optSemana').disabled = true;
+        if (document.getElementById('selectDia').value === 'SEMANA') document.getElementById('selectDia').value = 'HOJE';
+      } else {
+        document.getElementById('colSelectAlvo').classList.remove('d-none');
+        document.getElementById('optSemana').disabled = false;
+      }
+
+      if (isConsultas) {
+        document.getElementById('labelAlvo').innerText = tab === 'turma' ? 'TURMA' : 'PROFESSOR';
+        renderSeletorAlvo();
+      }
+    }
+
+    function populaSelectProfessores() {
+      if (!rawData) return;
+      var selAusente = document.getElementById('substAusente');
+      var selSubstituto = document.getElementById('substSubstituto');
+      selAusente.innerHTML = ''; selSubstituto.innerHTML = '';
+      var todosProfs = [].concat(rawData['1'].professoresLista, rawData['2'].professoresLista);
+      Array.from(new Set(todosProfs)).sort().forEach(function(p) {
+        selAusente.innerHTML += '<option value="' + p + '">' + p + '</option>';
+        selSubstituto.innerHTML += '<option value="' + p + '">' + p + '</option>';
+      });
+      aoMudarProfOuDia();
+    }
+
+    function aoMudarProfOuDia() {
+      if (!rawData) return;
+      var prof = document.getElementById('substAusente').value;
+      var dia = document.getElementById('substDia').value;
+      var checkGroup = document.getElementById('horariosCheckGroup');
+      var matSelect = document.getElementById('substMateriaSelect');
+      checkGroup.innerHTML = ''; matSelect.innerHTML = '<option value="">-- Selecione --</option>';
+      aulasiProfMapa = {};
+      if (!prof) return;
+
+      var aulasEncontradas = [];
+      var materiasSet = new Set();
+
+      ['1', '2'].forEach(function(tKey) {
+        var profsData = rawData[tKey].profsData;
+        if (profsData[prof] && profsData[prof][dia]) {
+          var diaObj = profsData[prof][dia];
+          for (var hor in diaObj) {
+            aulasEncontradas.push({ horario: hor, materia: diaObj[hor].materia, turma: diaObj[hor].turma });
+            materiasSet.add(diaObj[hor].materia);
+            aulasiProfMapa[hor] = diaObj[hor];
+          }
+        }
+      });
+
+      materiasSet.forEach(m => matSelect.innerHTML += '<option value="' + m + '">' + m + '</option>');
+      if (aulasEncontradas.length === 0) {
+        checkGroup.innerHTML = '<span class="text-muted small">Sem aulas neste dia.</span>';
+        return;
+      }
+
+      aulasEncontradas.forEach(a => {
+        checkGroup.innerHTML += '<div class="form-check form-check-inline me-3 mb-1">' +
+          '<input class="form-check-input chk-horario" type="checkbox" value="' + a.horario + '" data-turma="' + a.turma + '" id="chk_' + a.horario + '" onchange="aoMarcarHorario()">' +
+          '<label class="form-check-label small" for="chk_' + a.horario + '"><strong>' + a.horario + '</strong> (' + a.turma + ' - ' + a.materia + ')</label></div>';
+      });
+    }
+
+    function aoMarcarHorario() {
+      var marcados = document.querySelectorAll('.chk-horario:checked');
+      if (marcados.length > 0 && aulasiProfMapa[marcados[0].value]) {
+        document.getElementById('substMateria').value = aulasiProfMapa[marcados[0].value].materia;
+        document.getElementById('substMateriaSelect').value = aulasiProfMapa[marcados[0].value].materia;
+      }
+    }
+
+    function aoMudarMateria() {
+      var matSel = document.getElementById('substMateriaSelect').value;
+      if (!matSel) return;
+      document.getElementById('substMateria').value = matSel;
+      for (var hor in aulasiProfMapa) {
+        var chk = document.getElementById('chk_' + hor);
+        if (chk) chk.checked = (aulasiProfMapa[hor].materia === matSel);
+      }
+    }
+
+    function renderTabelasAdmin() {
+      if (!rawData) return;
+      var tbodySub = document.getElementById('tbodySubst');
+      tbodySub.innerHTML = '';
+      if (!rawData.substituicoes || rawData.substituicoes.length === 0) {
+        tbodySub.innerHTML = '<tr><td colspan="6" class="text-muted text-center">Nenhuma substituição.</td></tr>';
+      } else {
+        rawData.substituicoes.forEach(function(s) {
+          tbodySub.innerHTML += '<tr><td><strong>' + s.ausente + '</strong></td><td>' + s.substituto + '</td>' +
+            '<td><span class="badge bg-secondary">' + (s.turma || 'TODAS') + '</span></td>' +
+            '<td><small class="text-primary fw-bold">' + (s.horario || 'Todas') + ' (' + s.dia + ')</small></td>' +
+            '<td><small>' + s.inicio + ' até ' + s.fim + '</small></td>' +
+            '<td><button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="excluirLinha(\'Substituicoes\', ' + s.row + ')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+        });
+      }
+    }
+
+    function cadastrarSubstForm(e) {
+      e.preventDefault();
+      var marcadosElements = Array.from(document.querySelectorAll('.chk-horario:checked'));
+      if (marcadosElements.length === 0) return alert('Selecione ao menos um horário.');
+
+      var payload = {
+        ausente: document.getElementById('substAusente').value,
+        substituto: document.getElementById('substSubstituto').value,
+        dia: document.getElementById('substDia').value,
+        horarios: marcadosElements.map(c => c.value),
+        turmas: marcadosElements.map(c => c.getAttribute('data-turma')),
+        materia: document.getElementById('substMateria').value,
+        inicio: document.getElementById('substInicio').value,
+        fim: document.getElementById('substFim').value
+      };
+
+      fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'cadastrarSubstituicao', payload: payload }) })
+        .then(() => { alert('Substituição salva!'); carregarDados(); });
+    }
+
+    function renderSeletorAlvo() {
+      if (!rawData) return;
+      var turno = document.getElementById('selectTurno').value;
+      var info = rawData[turno];
+      var select = document.getElementById('selectAlvo');
+      select.innerHTML = '';
+      if (currentTab === 'geral') return renderTabela();
+
+      var lista = (currentTab === 'turma') ? info.turmasLista : info.professoresLista;
+      lista.forEach(item => select.innerHTML += '<option value="' + item + '">' + item + '</option>');
+      renderTabela();
+    }
+
+    function renderTabela() {
+      if (!rawData) return;
+      var turno = document.getElementById('selectTurno').value;
+      var alvo = document.getElementById('selectAlvo').value;
+      var info = rawData[turno];
+      var thead = document.getElementById('tableHeader');
+      var tbody = document.getElementById('tableBody');
+      tbody.innerHTML = ''; thead.innerHTML = '';
+
+      var valDia = document.getElementById('selectDia').value;
+      var diasParaExibir = (valDia === 'HOJE') ? [getDiaSemanaHoje()] : (valDia === 'SEMANA') ? todosDias : [valDia];
+
+      if (currentTab === 'geral') {
+        document.getElementById('tableTitle').innerText = 'Visão Geral - Todas as Turmas (' + diasParaExibir[0] + ')';
+        renderTabelaVisaoGeral(info, diasParaExibir[0], thead, tbody);
+      } else {
+        document.getElementById('tableTitle').innerText = 'Grade Horária - ' + (alvo || '');
+        if (!alvo) return;
+
+        var trHead = document.createElement('tr');
+        trHead.innerHTML = '<th style="width: 15%;">HORÁRIO</th>';
+        diasParaExibir.forEach(d => trHead.innerHTML += '<th>' + d + '</th>');
+        thead.appendChild(trHead);
+
+        if (currentTab === 'turma') renderTabelaTurma(info.turmasData[alvo], diasParaExibir, tbody);
+        else renderTabelaProfessor(info, alvo, diasParaExibir, tbody);
+      }
+      renderMural();
+    }
+
+    function renderTabelaVisaoGeral(info, diaExibir, thead, tbody) {
+      var turmas = info.turmasLista;
+      if (!turmas || turmas.length === 0) return;
+
+      var trHead = document.createElement('tr');
+      trHead.innerHTML = '<th style="width: 10%;">HORÁRIO</th>';
+      turmas.forEach(t => trHead.innerHTML += '<th>' + t + '</th>');
+      thead.appendChild(trHead);
+
+      var horariossSet = [];
+      turmas.forEach(t => {
+        if (info.turmasData[t] && info.turmasData[t][diaExibir]) {
+          info.turmasData[t][diaExibir].forEach(item => {
+            if (item.horario && horariossSet.indexOf(item.horario) === -1) horariossSet.push(item.horario);
+          });
+        }
+      });
+
+      horariossSet.forEach(hor => {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="fw-bold text-secondary">' + hor + '</td>';
+        turmas.forEach(t => {
+          var listaAulas = (info.turmasData[t] && info.turmasData[t][diaExibir]) ? info.turmasData[t][diaExibir] : [];
+          var item = listaAulas.find(a => a.horario === hor);
+          if (!item) tr.innerHTML += '<td class="text-muted small">-</td>';
+          else if (item.materia === 'Lanche' || item.materia === 'Almoço') tr.innerHTML += '<td class="cell-break">' + item.materia + '</td>';
+          else tr.innerHTML += '<td><strong>' + item.materia + '</strong>' + (item.prof ? '<span class="' + (item.isSubst ? 'badge-subst' : 'badge-sub') + '">' + item.prof + '</span>' : '') + '</td>';
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderTabelaTurma(turmaData, diasParaExibir, tbody) {
+      if (!turmaData) return;
+      var maxAulas = 0;
+      todosDias.forEach(d => { if (turmaData[d] && turmaData[d].length > maxAulas) maxAulas = turmaData[d].length; });
+
+      for (var i = 0; i < maxAulas; i++) {
+        var tr = document.createElement('tr');
+        var hor = (turmaData["SEGUNDA-FEIRA"] && turmaData["SEGUNDA-FEIRA"][i]) ? turmaData["SEGUNDA-FEIRA"][i].horario : '--:--';
+        tr.innerHTML = '<td class="fw-bold text-secondary">' + hor + '</td>';
+        diasParaExibir.forEach(d => {
+          var item = (turmaData[d] && turmaData[d][i]) ? turmaData[d][i] : { materia: '', prof: '' };
+          if (item.materia === 'Lanche' || item.materia === 'Almoço') tr.innerHTML += '<td class="cell-break">' + item.materia + '</td>';
+          else tr.innerHTML += '<td><strong>' + item.materia + '</strong>' + (item.prof ? '<span class="' + (item.isSubst ? 'badge-subst' : 'badge-sub') + '">' + item.prof + '</span>' : '') + '</td>';
+        });
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderTabelaProfessor(info, profNome, diasParaExibir, tbody) {
+      var profData = info.profsData[profNome] || {};
+      var horariossSet = [];
+      for (var tKey in info.turmasData) {
+        if (info.turmasData[tKey]["SEGUNDA-FEIRA"]) {
+          info.turmasData[tKey]["SEGUNDA-FEIRA"].forEach(item => {
+            if (item.horario && horariossSet.indexOf(item.horario) === -1) horariossSet.push(item.horario);
+          });
+        }
+      }
+
+      horariossSet.forEach(hor => {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="fw-bold text-secondary">' + hor + '</td>';
+        diasParaExibir.forEach(d => {
+          var aula = (profData[d] && profData[d][hor]) ? profData[d][hor] : null;
+          if (aula) tr.innerHTML += '<td><strong>' + aula.materia + '</strong><span class="' + (aula.isSubst ? 'badge-subst' : 'badge-sub') + '">' + aula.turma + '</span></td>';
+          else tr.innerHTML += '<td class="text-muted small">-</td>';
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderMural() {
+      if (!rawData || !rawData.recados) return;
+      var divMural = document.getElementById('listaRecadosMural');
+      divMural.innerHTML = '';
+      rawData.recados.forEach(r => {
+        divMural.innerHTML += '<div class="recado-card"><div class="text-secondary small mb-1"><strong>' + r.autor + '</strong> (' + r.dataHora + ')</div><div>' + r.mensagem + '</div></div>';
+      });
+    }
+
+    function salvarRecado(e) {
+      e.preventDefault();
+      var payload = {
+        turno: document.getElementById('selectTurno').value,
+        autor: document.getElementById('obsAutor').value,
+        mensagem: document.getElementById('obsMsg').value
+      };
+      fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'salvarObservacao', payload: payload }) })
+        .then(() => { alert('Aviso publicado!'); carregarDados(); });
+    }
+
+    function excluirLinha(aba, linha) {
+      if (confirm('Deseja excluir?')) {
+        fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'removerLinhaAba', payload: { aba: aba, linha: linha } }) })
+          .then(() => carregarDados());
+      }
+    }
+  </script>
+</body>
+</html>
